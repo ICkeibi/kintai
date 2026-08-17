@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>勤怠打刻</title>
 
-  <!-- PWA Manifest 読み込み -->
+  <!-- PWA Manifest & アイコン設定 -->
   <link rel="manifest" href="manifest.json">
-
-  <!-- アイコンの設定 -->
   <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
 
@@ -17,21 +15,61 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="勤怠打刻">
 
-  <!-- アクセスしたらGASのWebアプリへ自動転送 -->
-  <script>
-    const gasUrl = "https://script.google.com/macros/s/AKfycbz2vLe_nV5ox1_npEST1ytjAj8U12R3esIc5TUXv0VQhtEMuhPk32ce7ZEdOJg3mZ0S/exec";
-    
-    // アイコンの読み込み時間を確保するため1秒待って転送
-    window.onload = function() {
-      setTimeout(function() {
-        window.location.href = gasUrl;
-      }, 1000);
-    };
-  </script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      text-align: center;
+      padding: 60px 20px 20px;
+      background-color: #f4f6f8;
+      margin: 0;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-width: 320px;
+      margin: 0 auto;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 20px;
+    }
+    p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px 0;
+      font-size: 18px;
+      color: #ffffff;
+      background-color: #2563eb;
+      border: none;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      box-sizing: border-box;
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    }
+    .btn:active {
+      background-color: #1d4ed8;
+    }
+  </style>
 </head>
 <body>
-  <p style="text-align: center; margin-top: 50px; font-family: sans-serif; color: #666;">
-    勤怠打刻画面へ移動しています...
-  </p>
+  <div class="card">
+    <h2>I・C・S勤怠打刻</h2>
+    <p>下のボタンを押して打刻画面を開いてください。</p>
+    <a id="app-link" href="#" class="btn">打刻画面を開く</a>
+  </div>
+
+  <script>
+    const gasUrl = "https://script.google.com/macros/s/AKfycbz2vLe_nV5ox1_npEST1ytjAj8U12R3esIc5TUXv0VQhtEMuhPk32ce7ZEdOJg3mZ0S/exec";
+    document.getElementById("app-link").href = gasUrl;
+  </script>
 </body>
 </html>
