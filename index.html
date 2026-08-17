@@ -5,26 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>勤怠打刻</title>
 
-  <!-- PWA Manifest & アイコン設定 -->
+  <!-- PWA Manifest 読み込み -->
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=2">
-  <link rel="apple-touch-icon-precomposed" href="icon.png?v=2">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=2">
-  
+
+  <!-- アイコンの設定 -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+
   <!-- Webアプリ設定 -->
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="勤怠打刻">
 
-  <!-- 自動転送（リダイレクト） -->
+  <!-- アクセスしたらGASのWebアプリへ自動転送 -->
   <script>
     const gasUrl = "https://script.google.com/macros/s/AKfycbz2vLe_nV5ox1_npEST1ytjAj8U12R3esIc5TUXv0VQhtEMuhPk32ce7ZEdOJg3mZ0S/exec";
     
-    // アイコン読み込み時間を確保するため1.5秒待機
+    // アイコンの読み込み時間を確保するため1秒待って転送
     window.onload = function() {
       setTimeout(function() {
         window.location.href = gasUrl;
-      }, 1500);
+      }, 1000);
     };
   </script>
 </head>
