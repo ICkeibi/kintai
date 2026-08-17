@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>勤怠打刻</title>
+
+  <!-- アイコンの設定（同じフォルダに置く画像ファイル名） -->
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+
+  <!-- Webアプリ設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="勤怠打刻">
+
+  <!-- アクセスしたらGASのWebアプリへ自動転送（リダイレクト） -->
+  <script>
+    // ここにGASのWebアプリURLを入力してください
+    const gasUrl = "https://script.google.com/macros/s/AKfycbz2vLe_nV5ox1_npEST1ytjAj8U12R3esIc5TUXv0VQhtEMuhPk32ce7ZEdOJg3mZ0S/exec";
+    
+    // ページ読み込みと同時に自動転送
+    window.location.href = gasUrl;
+  </script>
+</head>
+<body>
+  <p style="text-align: center; margin-top: 50px; font-family: sans-serif; color: #666;">
+    勤怠打刻画面へ移動しています...
+  </p>
+</body>
+</html>
