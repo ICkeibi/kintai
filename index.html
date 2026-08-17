@@ -14,13 +14,17 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="勤怠打刻">
 
-  <!-- アクセスしたらGASのWebアプリへ自動転送（リダイレクト） -->
+ <!-- アクセスしたらGASのWebアプリへ自動転送（リダイレクト） -->
   <script>
     // ここにGASのWebアプリURLを入力してください
     const gasUrl = "https://script.google.com/macros/s/AKfycbz2vLe_nV5ox1_npEST1ytjAj8U12R3esIc5TUXv0VQhtEMuhPk32ce7ZEdOJg3mZ0S/exec";
     
-    // ページ読み込みと同時に自動転送
-    window.location.href = gasUrl;
+    // 1秒待ってから自動転送（Safariがアイコンを読み込む時間を確保するため）
+    window.onload = function() {
+      setTimeout(function() {
+        window.location.href = gasUrl;
+      }, 1000);
+    };
   </script>
 </head>
 <body>
