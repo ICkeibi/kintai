@@ -100,7 +100,6 @@
       </div>
     </div>
 
-    <!-- リアルタイム日時表示部分 -->
     <div class="datetime-container">
       <span class="date-display" id="dateDisplay">----年--月--日(-)</span>
       <span class="clock-display" id="clock">00:00:00</span>
@@ -142,10 +141,8 @@
   </div>
 
   <script>
-    // 正しいGASのWebアプリURL
     var GAS_URL = "https://script.google.com/macros/s/AKfycbzuUVbIKZZ5tNmJa-aTHpfUhIuH-fLBd8YwBmeY9OExAk-DJaEjDf7wjv-WXbq-C1nO/exec";
 
-    // 時計の動的更新関数
     function updateClock() {
       var now = new Date();
       var y = now.getFullYear();
@@ -162,7 +159,6 @@
       document.getElementById('clock').innerText = hh + ':' + mm + ':' + ss;
     }
 
-    // 画面表示時に1秒ごとに時計を動かす
     updateClock();
     setInterval(updateClock, 1000);
 
@@ -217,6 +213,7 @@
       });
     }
 
+    // GPS位置情報を取得して打刻を送信する関数
     function handleStamp(type, btnElement) {
       var id = document.getElementById('empId').value.trim();
       var name = document.getElementById('empName').value.trim();
@@ -224,6 +221,7 @@
 
       if (!id) {
         msgDiv.className = 'error';
+        msgDiv.style.display = 'block';
         msgDiv.innerText = '社員IDを入力してください。';
         return;
       }
@@ -236,9 +234,33 @@
 
       msgDiv.className = '';
       msgDiv.style.display = 'block';
+      msgDiv.innerText = '位置情報を取得中...';
+
+      // 位置情報の取得処理
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var locationStr = "https://maps.google.com/?q=" + lat + "," + lng;
+            sendStampData(id, name, type, locationStr, btnElement);
+          },
+          function(error) {
+            // 位置情報許可が拒否された場合や取得失敗時
+            sendStampData(id, name, type, "位置情報取得失敗 (" + error.message + ")", btnElement);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        sendStampData(id, name, type, "位置情報非対応端末", btnElement);
+      }
+    }
+
+    function sendStampData(id, name, type, locationStr, btnElement) {
+      var msgDiv = document.getElementById('message');
       msgDiv.innerText = '送信中...';
 
-      callGasApi({ action: 'recordTime', id: id, name: name, type: type, location: '位置情報' }, function(res) {
+      callGasApi({ action: 'recordTime', id: id, name: name, type: type, location: locationStr }, function(res) {
         msgDiv.className = res.success ? 'success' : 'error';
         msgDiv.innerText = res.message;
         if (!res.success && btnElement) btnElement.disabled = false;
