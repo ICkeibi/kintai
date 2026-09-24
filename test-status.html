@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ⅰ・C・S勤怠管理</title>
+
+  <!-- PWA Manifest & アイコン設定 -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+
+  <!-- Webアプリ設定 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="勤怠打刻">
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0; padding: 12px;
+      display: flex; justify-content: center; align-items: flex-start; min-height: 100vh;
+    }
+    .card {
+      background: #ffffff; padding: 24px; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); width: 100%; max-width: 480px;
+      position: relative;
+    }
+    .header-container {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; position: relative;
+    }
+    h2 { margin: 0; color: #333; font-size: 20px; }
+    
+    .menu-btn {
+      background: none; border: none; font-size: 24px; cursor: pointer; color: #555; padding: 0 8px; line-height: 1;
+    }
+
+    .dropdown-menu {
+      display: none; position: absolute; top: 35px; right: 0;
+      background-color: #ffffff; min-width: 140px; box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+      border-radius: 8px; z-index: 100; border: 1px solid #e9ecef; overflow: hidden;
+    }
+    .dropdown-menu div {
+      color: #333; padding: 12px 16px; font-size: 15px; font-weight: bold; cursor: pointer; border-bottom: 1px solid #f1f1f1;
+    }
+    .dropdown-menu div:last-child { border-bottom: none; }
+
+    .datetime-container {
+      text-align: center; background-color: #eef2f7; padding: 12px; border-radius: 8px;
+      margin: 12px 0 18px 0; font-weight: bold; color: #2c3e50;
+      display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap;
+      min-height: 48px;
+    }
+    .date-display { font-size: 1.05em; }
+    .clock-display { font-size: 1.3em; color: #007bff; }
+
+    .form-group { margin-bottom: 14px; text-align: left; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; color: #555; font-size: 14px; }
+    input[type="text"] {
+      width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px;
+    }
+    
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    button.stamp-btn {
+      padding: 12px 8px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .btn-label-jp { font-size: 16px; }
+    .btn-label-en { font-size: 11px; font-weight: normal; opacity: 0.85; margin-top: 2px; }
+
+    .btn-in { background-color: #28a745; color: white; }
+    .btn-out { background-color: #dc3545; color: white; }
+    .btn-night-in { background-color: #17a2b8; color: white; }
+    .btn-night-out { background-color: #6c757d; color: white; }
+
+    button:disabled {
+      background-color: #cccccc !important;
+      color: #666666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.6;
+    }
+
+    #message { margin-top: 12px; padding: 10px; border-radius: 6px; text-align: center; font-size: 14px; display: none; }
+    .success { background-color: #d4edda; color: #155724; display: block !important; }
+    .error { background-color: #f8d7da; color: #721c24; display: block !important; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="header-container">
+      <h2>Ⅰ・C・S勤怠管理</h2>
+      <button type="button" class="menu-btn" onclick="toggleMenu(event)">⋮</button>
+      
+      <div class="dropdown-menu" id="dropdownMenu">
+        <div onclick="selectMenu('check')">打刻確認</div>
+        <div onclick="selectMenu('request')">打刻申請</div>
+      </div>
+    </div>
+
+    <div class="datetime-container">
+      <span class="date-display" id="dateDisplay">----年--月--日(-)</span>
+      <span class="clock-display" id="clock">00:00:00</span>
+    </div>
+
+    <div class="form-group">
+      <label for="empId">社員ID</label>
+      <input type="text" id="empId" placeholder="社員IDを入力" onchange="fetchName()">
+    </div>
+
+    <div class="form-group">
+      <label for="empName">氏名</label>
+      <input type="text" id="empName" placeholder="氏名を入力">
+    </div>
+
+   <div class="btn-grid">
+  <button
+    type="button"
+    id="btnDayIn"
+    class="stamp-btn btn-in"
+    onclick="handleStamp('昼出勤', this)"
+  >
+    <span class="btn-label-jp">昼出勤</span>
+    <span class="btn-label-en">Day In</span>
+  </button>
+
+  <button
+    type="button"
+    id="btnDayOut"
+    class="stamp-btn btn-out"
+    onclick="handleStamp('昼退勤', this)"
+  >
+    <span class="btn-label-jp">昼退勤</span>
+    <span class="btn-label-en">Day Out</span>
+  </button>
+</div>
+
+<div class="btn-grid">
+  <button
+    type="button"
+    id="btnNightIn"
+    class="stamp-btn btn-night-in"
+    onclick="handleStamp('夜出勤', this)"
+  >
+    <span class="btn-label-jp">夜出勤</span>
+    <span class="btn-label-en">Night In</span>
+  </button>
+
+  <button
+    type="button"
+    id="btnNightOut"
+    class="stamp-btn btn-night-out"
+    onclick="handleStamp('夜退勤', this)"
+  >
+    <span class="btn-label-jp">夜退勤</span>
+    <span class="btn-label-en">Night Out</span>
+  </button>
+</div>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    var GAS_URL = "https://script.google.com/macros/s/AKfycbzFV5fMZkMdNmdM-WBr7fFMS3eCKRXPkbHgdJm50zPrwWiYlYKTbHNpg47GGLq7HB5U/exec";
+
+    function updateClock() {
+      var now = new Date();
+      var y = now.getFullYear();
+      var m = ('0' + (now.getMonth() + 1)).slice(-2);
+      var d = ('0' + now.getDate()).slice(-2);
+      var days = ['日', '月', '火', '水', '木', '金', '土'];
+      var w = days[now.getDay()];
+
+      var hh = ('0' + now.getHours()).slice(-2);
+      var mm = ('0' + now.getMinutes()).slice(-2);
+      var ss = ('0' + now.getSeconds()).slice(-2);
+
+      document.getElementById('dateDisplay').innerText = y + '年' + m + '月' + d + '日(' + w + ')';
+      document.getElementById('clock').innerText = hh + ':' + mm + ':' + ss;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+window.onload = function() {
+
+  updateClock();
+
+  try {
+
+    // ================================================
+    // 社員ID・氏名を復元
+    // Android / iPhone 共通
+    // ================================================
+
+    var savedId =
+      localStorage.getItem('savedEmpId');
+
+    var savedName =
+      localStorage.getItem('savedEmpName');
+
+
+    if (savedId) {
+
+      document
+        .getElementById('empId')
+        .value =
+          savedId;
+    }
+
+
+    if (savedName) {
+
+      document
+        .getElementById('empName')
+        .value =
+          savedName;
+    }
+
+
+    // ================================================
+    // 保存済み社員IDがある場合
+    //
+    // localStorageの打刻状態ではなく
+    // GASから現在の本当の状態を取得する
+    // ================================================
+
+    if (savedId) {
+
+      // 状態取得中の誤操作防止
+      setAllStampButtonsDisabled(true);
+
+
+      refreshPunchStatus(
+        function(success) {
+
+          // GASとの通信に失敗した場合は
+          // 一旦ボタンを使えるように戻す
+          //
+          // 二重打刻はGAS側でも防止される
+          if (!success) {
+
+            setAllStampButtonsDisabled(false);
+          }
+        }
+      );
+
+    } else {
+
+      // 社員IDがまだ保存されていない場合
+      // 4ボタンは通常表示
+      setAllStampButtonsDisabled(false);
+    }
+
+
+  } catch(e) {
+
+    console.log(
+      '保存データの読み込みに失敗しました',
+      e
+    );
+
+
+    setAllStampButtonsDisabled(false);
+  }
+};
+  /**
+ * ==================================================
+ * 打刻成功状態を保存
+ * ==================================================
+ */
+
+
+
+
+    function callGasApi(params, callback) {
+      var queryStr = Object.keys(params).map(function(key) {
+        return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+      }).join('&');
+
+      fetch(GAS_URL + '?' + queryStr)
+        .then(function(res) { return res.json(); })
+        .then(function(data) { callback(data); })
+        .catch(function(err) {
+          callback({ success: false, message: '通信エラーが発生しました' });
+        });
+    }
+// ==================================================
+// 4つの打刻ボタンをまとめてON/OFF
+// ==================================================
+function setAllStampButtonsDisabled(disabled) {
+
+  document.getElementById('btnDayIn').disabled =
+    disabled;
+
+  document.getElementById('btnDayOut').disabled =
+    disabled;
+
+  document.getElementById('btnNightIn').disabled =
+    disabled;
+
+  document.getElementById('btnNightOut').disabled =
+    disabled;
+}
+
+
+// ==================================================
+// GASから返されたボタン状態を画面へ反映
+// ==================================================
+function applyPunchStatus(data) {
+
+  if (
+    !data ||
+    !data.success ||
+    !data.buttons
+  ) {
+    return false;
+  }
+
+
+  document.getElementById('btnDayIn').disabled =
+    !data.buttons.dayInEnabled;
+
+  document.getElementById('btnDayOut').disabled =
+    !data.buttons.dayOutEnabled;
+
+  document.getElementById('btnNightIn').disabled =
+    !data.buttons.nightInEnabled;
+
+  document.getElementById('btnNightOut').disabled =
+    !data.buttons.nightOutEnabled;
+
+
+  return true;
+}
+
+
+// ==================================================
+// GASから現在の打刻状態を取得
+// ==================================================
+function refreshPunchStatus(callback) {
+
+  var id =
+    document
+      .getElementById('empId')
+      .value
+      .trim();
+
+
+  if (!id) {
+
+    setAllStampButtonsDisabled(false);
+
+    if (callback) {
+      callback(false);
+    }
+
+    return;
+  }
+
+
+  callGasApi(
+    {
+      action: 'getPunchStatus',
+      id: id
+    },
+
+    function(res) {
+
+      if (
+        res &&
+        res.success
+      ) {
+
+        // 社員マスタの氏名を画面へ反映
+        if (res.empName) {
+
+          document
+            .getElementById('empName')
+            .value =
+              res.empName;
+
+
+          try {
+
+            localStorage.setItem(
+              'savedEmpId',
+              id
+            );
+
+            localStorage.setItem(
+              'savedEmpName',
+              res.empName
+            );
+
+          } catch(e) {}
+        }
+
+
+        applyPunchStatus(res);
+
+
+        if (callback) {
+          callback(true);
+        }
+
+        return;
+      }
+
+
+      console.log(
+        '打刻状態を取得できませんでした',
+        res
+      );
+
+
+      if (callback) {
+        callback(false);
+      }
+    }
+  );
+}
+    function toggleMenu(event) {
+      if (event) event.stopPropagation();
+      var menu = document.getElementById('dropdownMenu');
+      if (menu) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    window.onclick = function(event) {
+      var menu = document.getElementById('dropdownMenu');
+      if (menu && menu.style.display === 'block') {
+        menu.style.display = 'none';
+      }
+    };
+
+    function selectMenu(type) {
+      alert("選択されたメニュー: " + type);
+      var menu = document.getElementById('dropdownMenu');
+      if (menu) menu.style.display = 'none';
+    }
+
+   function fetchName() {
+
+  var id =
+    document
+      .getElementById('empId')
+      .value
+      .trim();
+
+
+  var nameInput =
+    document
+      .getElementById('empName');
+
+
+  var msgDiv =
+    document
+      .getElementById('message');
+
+
+  // ================================================
+  // 社員IDが空欄
+  // ================================================
+
+  if (!id) {
+
+    nameInput.value =
+      '';
+
+
+    setAllStampButtonsDisabled(
+      false
+    );
+
+
+    return;
+  }
+
+
+  // ================================================
+  // 社員確認中は誤操作防止のため
+  // 一旦4ボタンをOFF
+  // ================================================
+
+  setAllStampButtonsDisabled(
+    true
+  );
+
+
+  // ================================================
+  // 社員名取得
+  // ================================================
+
+  callGasApi(
+    {
+      action:
+        'getEmployeeName',
+
+      id:
+        id
+    },
+
+    function(res) {
+
+      // ==============================================
+      // 社員IDが正常
+      // ==============================================
+
+      if (
+        res &&
+        res.success
+      ) {
+
+        nameInput.value =
+          res.name;
+
+
+        // --------------------------------------------
+        // Android / iPhone 共通
+        // 社員ID・氏名を今までどおり保存
+        // --------------------------------------------
+
+        try {
+
+          localStorage.setItem(
+            'savedEmpId',
+            id
+          );
+
+
+          localStorage.setItem(
+            'savedEmpName',
+            res.name
+          );
+
+        } catch(e) {}
+
+
+        // --------------------------------------------
+        // 氏名取得後に
+        // GASから現在の打刻状態を取得
+        // --------------------------------------------
+
+        refreshPunchStatus(
+          function(success) {
+
+            if (!success) {
+
+              // 状態取得だけ失敗した場合
+              // 一旦操作可能に戻す
+              setAllStampButtonsDisabled(
+                false
+              );
+            }
+          }
+        );
+
+
+        return;
+      }
+
+
+      // ==============================================
+      // 社員IDが見つからない
+      // ==============================================
+
+      nameInput.value =
+        '';
+
+
+      msgDiv.className =
+        'error';
+
+
+      msgDiv.style.display =
+        'block';
+
+
+      msgDiv.innerText =
+        res &&
+        res.message
+          ? res.message
+          : '社員IDが見つかりません。';
+
+
+      // 不正な社員IDなので
+      // ボタンは押せない状態にする
+      setAllStampButtonsDisabled(
+        true
+      );
+    }
+  );
+}
+
+    // GPS位置情報を取得して打刻を送信する関数
+    function handleStamp(type, btnElement) {
+      var id = document.getElementById('empId').value.trim();
+      var name = document.getElementById('empName').value.trim();
+      var msgDiv = document.getElementById('message');
+
+      if (!id) {
+        msgDiv.className = 'error';
+        msgDiv.style.display = 'block';
+        msgDiv.innerText = '社員IDを入力してください。';
+        return;
+      }
+
+      if (btnElement) btnElement.disabled = true;
+      try {
+        localStorage.setItem('savedEmpId', id);
+        localStorage.setItem('savedEmpName', name);
+      } catch(e){}
+
+      msgDiv.className = '';
+      msgDiv.style.display = 'block';
+      msgDiv.innerText = '位置情報を取得中...';
+
+      // 位置情報の取得処理
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function(position) {
+            var lat = position.coords.latitude;
+            var lng = position.coords.longitude;
+            var locationStr = "https://maps.google.com/?q=" + lat + "," + lng;
+            sendStampData(id, name, type, locationStr, btnElement);
+          },
+          function(error) {
+            // 位置情報許可が拒否された場合や取得失敗時
+            sendStampData(id, name, type, "位置情報取得失敗 (" + error.message + ")", btnElement);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      } else {
+        sendStampData(id, name, type, "位置情報非対応端末", btnElement);
+      }
+    }
+
+function sendStampData(
+  id,
+  name,
+  type,
+  locationStr,
+  btnElement
+) {
+
+  var msgDiv =
+    document.getElementById(
+      'message'
+    );
+
+
+  msgDiv.innerText =
+    '送信中...';
+
+
+  callGasApi(
+    {
+      action:
+        'recordTime',
+
+      id:
+        id,
+
+      name:
+        name,
+
+      type:
+        type,
+
+      location:
+        locationStr
+    },
+
+
+    function(res) {
+
+      // ================================================
+      // 打刻成功
+      // ================================================
+
+      if (
+        res &&
+        res.success
+      ) {
+
+        msgDiv.className =
+          'success';
+
+
+        msgDiv.style.display =
+          'block';
+
+
+        msgDiv.innerText =
+          res.message;
+
+
+        // ==============================================
+        // 打刻成功後は
+        // localStorageのボタン状態ではなく
+        // GASから最新状態を取得する
+        // ==============================================
+
+        refreshPunchStatus(
+          function(success) {
+
+            // ------------------------------------------
+            // 状態取得に失敗した場合
+            //
+            // 今押したボタンは
+            // 連打防止のためOFFのままにする
+            // ------------------------------------------
+
+            if (
+              !success &&
+              btnElement
+            ) {
+
+              btnElement.disabled =
+                true;
+            }
+          }
+        );
+
+
+        return;
+      }
+
+
+      // ================================================
+      // 打刻失敗
+      // ================================================
+
+      msgDiv.className =
+        'error';
+
+
+      msgDiv.style.display =
+        'block';
+
+
+      msgDiv.innerText =
+        res &&
+        res.message
+          ? res.message
+          : '打刻に失敗しました。';
+
+
+      // ================================================
+      // 失敗時もGASから現在状態を取得
+      //
+      // 例：
+      // 二重退勤だった場合なども
+      // 正しいボタン状態へ戻す
+      // ================================================
+
+      refreshPunchStatus(
+        function(success) {
+
+          // GASの状態取得まで失敗した場合だけ
+          // 今押したボタンを再び操作可能にする
+          if (
+            !success &&
+            btnElement
+          ) {
+
+            btnElement.disabled =
+              false;
+          }
+        }
+      );
+    }
+  );
+}
+    function(res) {
+
+      // ================================================
+      // 成功
+      // ================================================
+      if (res && res.success) {
+
+        msgDiv.className =
+          'success';
+
+        msgDiv.innerText =
+          res.message;
+
+
+        // ----------------------------------------------
+        // 成功したボタンを記憶
+        // ----------------------------------------------
+        saveStampButtonState(type);
+
+
+        // ----------------------------------------------
+        // ボタンをグレー化して押せなくする
+        // ----------------------------------------------
+        if (btnElement) {
+
+          btnElement.disabled =
+            true;
+        }
+
+
+        // ----------------------------------------------
+        // 退勤なら勤務1セット終了
+        // ----------------------------------------------
+        finishShiftState(type);
+
+
+        return;
+      }
+
+
+      // ================================================
+      // 失敗
+      // ================================================
+      msgDiv.className =
+        'error';
+
+
+      msgDiv.innerText =
+        res && res.message
+          ? res.message
+          : '打刻に失敗しました。';
+
+
+      // ----------------------------------------------
+      // GAS側で失敗した場合だけ
+      // ボタンを再び押せるようにする
+      // ----------------------------------------------
+      if (btnElement) {
+
+        btnElement.disabled =
+          false;
+      }
+    }
+  );
+}  </script>
+</body>
+</html>
