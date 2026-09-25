@@ -758,30 +758,39 @@ function sendStampData(
 
 
         // ==============================================
-        // 打刻成功後は
-        // localStorageのボタン状態ではなく
-        // GASから最新状態を取得する
+        // 打刻成功直後は少し待ってから
+        // GASの最新状態を取得する
+        //
+        // Apps ScriptのContentServiceの
+        // 一時リダイレクトURL対策
         // ==============================================
 
-        refreshPunchStatus(
-          function(success) {
+        setTimeout(
+          function() {
 
-            // ------------------------------------------
-            // 状態取得に失敗した場合
-            //
-            // 今押したボタンは
-            // 連打防止のためOFFのままにする
-            // ------------------------------------------
+            refreshPunchStatus(
+              function(success) {
 
-            if (
-              !success &&
-              btnElement
-            ) {
+                // --------------------------------------
+                // 状態取得に失敗した場合
+                //
+                // 今押したボタンは
+                // 連打防止のためOFFのまま
+                // --------------------------------------
 
-              btnElement.disabled =
-                true;
-            }
-          }
+                if (
+                  !success &&
+                  btnElement
+                ) {
+
+                  btnElement.disabled =
+                    true;
+                }
+              }
+            );
+
+          },
+          1500
         );
 
 
@@ -809,27 +818,32 @@ function sendStampData(
 
 
       // ================================================
-      // 失敗時もGASから現在状態を取得
-      //
-      // 例：
-      // 二重退勤だった場合なども
-      // 正しいボタン状態へ戻す
+      // 打刻失敗時も少し待ってから
+      // GASの現在状態を取得
       // ================================================
 
-      refreshPunchStatus(
-        function(success) {
+      setTimeout(
+        function() {
 
-          // GASの状態取得まで失敗した場合だけ
-          // 今押したボタンを再び操作可能にする
-          if (
-            !success &&
-            btnElement
-          ) {
+          refreshPunchStatus(
+            function(success) {
 
-            btnElement.disabled =
-              false;
-          }
-        }
+              // GASの状態取得まで失敗した場合だけ
+              // 今押したボタンを再び操作可能にする
+
+              if (
+                !success &&
+                btnElement
+              ) {
+
+                btnElement.disabled =
+                  false;
+              }
+            }
+          );
+
+        },
+        1500
       );
     }
   );
