@@ -276,17 +276,77 @@ window.onload = function() {
 
 
     function callGasApi(params, callback) {
-      var queryStr = Object.keys(params).map(function(key) {
-        return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-      }).join('&');
 
-      fetch(GAS_URL + '?' + queryStr)
-        .then(function(res) { return res.json(); })
-        .then(function(data) { callback(data); })
-        .catch(function(err) {
-          callback({ success: false, message: '通信エラーが発生しました' });
-        });
+  // 毎回URLを変えて、
+  // Apps Scriptの一時リダイレクトURLが
+  // キャッシュされないようにする
+  params = Object.assign(
+    {},
+    params,
+    {
+      _: Date.now()
     }
+  );
+
+
+  var queryStr =
+    Object.keys(params)
+      .map(function(key) {
+
+        return (
+          encodeURIComponent(key) +
+          '=' +
+          encodeURIComponent(params[key])
+        );
+
+      })
+      .join('&');
+
+
+  fetch(
+    GAS_URL + '?' + queryStr,
+    {
+      method: 'GET',
+
+      // キャッシュを使用しない
+      cache: 'no-store',
+
+      // Apps Scriptのリダイレクトを追跡
+      redirect: 'follow'
+    }
+  )
+
+    .then(function(res) {
+
+      if (!res.ok) {
+
+        throw new Error(
+          'HTTP ' + res.status
+        );
+      }
+
+      return res.json();
+    })
+
+    .then(function(data) {
+
+      callback(data);
+    })
+
+    .catch(function(err) {
+
+      console.error(
+        'GAS通信エラー：',
+        err
+      );
+
+      callback({
+        success: false,
+        message:
+          '通信エラーが発生しました'
+      });
+    });
+}
 // ==================================================
 // 4つの打刻ボタンをまとめてON/OFF
 // ==================================================
