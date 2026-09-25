@@ -706,38 +706,173 @@ function sendStampData(
 ) {
 
   var msgDiv =
-    document.getElementById(
-      'message'
+    document.getElementById('message');
+
+
+  msgDiv.className = '';
+  msgDiv.style.display = 'block';
+  msgDiv.innerText = '送信中...';
+
+
+  // ==================================================
+  // 通信エラーになった場合、
+  // 再打刻せずGASの現在状態を確認する
+  // ==================================================
+  function verifyAfterCommunicationError() {
+
+    msgDiv.className = '';
+    msgDiv.style.display = 'block';
+    msgDiv.innerText =
+      '打刻結果を確認中...';
+
+
+    setTimeout(
+      function() {
+
+        callGasApi(
+          {
+            action: 'getPunchStatus',
+            id: id
+          },
+
+          function(statusRes) {
+
+            // ==========================================
+            // 現在の状態取得に成功
+            // ==========================================
+
+            if (
+              statusRes &&
+              statusRes.success &&
+              statusRes.buttons
+            ) {
+
+              // GASの状態をボタンへ反映
+              applyPunchStatus(statusRes);
+
+
+              var punchReflected = false;
+
+
+              // ========================================
+              // 押した打刻がGAS側へ反映されたか確認
+              // ========================================
+
+              if (
+                type === '昼出勤'
+              ) {
+
+                punchReflected =
+                  !statusRes.buttons.dayInEnabled;
+              }
+
+
+              else if (
+                type === '昼退勤'
+              ) {
+
+                punchReflected =
+                  !statusRes.buttons.dayOutEnabled;
+              }
+
+
+              else if (
+                type === '夜出勤'
+              ) {
+
+                punchReflected =
+                  !statusRes.buttons.nightInEnabled;
+              }
+
+
+              else if (
+                type === '夜退勤'
+              ) {
+
+                punchReflected =
+                  !statusRes.buttons.nightOutEnabled;
+              }
+
+
+              // ========================================
+              // 打刻は実際には成功していた
+              // ========================================
+
+              if (punchReflected) {
+
+                msgDiv.className =
+                  'success';
+
+
+                msgDiv.style.display =
+                  'block';
+
+
+                msgDiv.innerText =
+                  type +
+                  ' の打刻が完了しました。';
+
+
+                return;
+              }
+            }
+
+
+            // ==========================================
+            // 状態確認もできなかった
+            //
+            // 安全のため再打刻させない
+            // ==========================================
+
+            msgDiv.className =
+              'error';
+
+
+            msgDiv.style.display =
+              'block';
+
+
+            msgDiv.innerText =
+              '打刻結果を確認できませんでした。' +
+              '再打刻せず、画面を再読み込みして確認してください。';
+
+
+            if (btnElement) {
+
+              btnElement.disabled =
+                true;
+            }
+          }
+        );
+
+      },
+      1500
     );
+  }
 
 
-  msgDiv.innerText =
-    '送信中...';
-
+  // ==================================================
+  // 打刻送信
+  // ==================================================
 
   callGasApi(
     {
-      action:
-        'recordTime',
+      action: 'recordTime',
 
-      id:
-        id,
+      id: id,
 
-      name:
-        name,
+      name: name,
 
-      type:
-        type,
+      type: type,
 
-      location:
-        locationStr
+      location: locationStr
     },
 
 
     function(res) {
 
       // ================================================
-      // 打刻成功
+      // 通常どおり返答を受け取れた
       // ================================================
 
       if (
@@ -758,11 +893,7 @@ function sendStampData(
 
 
         // ==============================================
-        // 打刻成功直後は少し待ってから
-        // GASの最新状態を取得する
-        //
-        // Apps ScriptのContentServiceの
-        // 一時リダイレクトURL対策
+        // 少し待って最新ボタン状態を取得
         // ==============================================
 
         setTimeout(
@@ -770,13 +901,6 @@ function sendStampData(
 
             refreshPunchStatus(
               function(success) {
-
-                // --------------------------------------
-                // 状態取得に失敗した場合
-                //
-                // 今押したボタンは
-                // 連打防止のためOFFのまま
-                // --------------------------------------
 
                 if (
                   !success &&
@@ -799,7 +923,24 @@ function sendStampData(
 
 
       // ================================================
-      // 打刻失敗
+      // GASでは処理された可能性があるが
+      // ブラウザが返答を受け取れなかった
+      // ================================================
+
+      if (
+        res &&
+        res.message ===
+          '通信エラーが発生しました'
+      ) {
+
+        verifyAfterCommunicationError();
+
+        return;
+      }
+
+
+      // ================================================
+      // 本当の打刻エラー
       // ================================================
 
       msgDiv.className =
@@ -818,8 +959,7 @@ function sendStampData(
 
 
       // ================================================
-      // 打刻失敗時も少し待ってから
-      // GASの現在状態を取得
+      // エラー後も正しいボタン状態を取得
       // ================================================
 
       setTimeout(
@@ -827,9 +967,6 @@ function sendStampData(
 
           refreshPunchStatus(
             function(success) {
-
-              // GASの状態取得まで失敗した場合だけ
-              // 今押したボタンを再び操作可能にする
 
               if (
                 !success &&
