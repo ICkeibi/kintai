@@ -51,5 +51,25 @@
     allow="geolocation"
   ></iframe>
 
+
+<script>
+// ID・氏名だけをこのGitHubサイト内に記憶。URLへIDを追加しない。
+(function(){
+ const channel='ics-attendance-identity-v1',key='ics-attendance-remembered-employee-v1',sessions=new WeakMap();
+ function allowedOrigin(origin){try{const u=new URL(origin),h=u.hostname;return u.protocol==='https:'&&(h==='script.google.com'||h==='script.googleusercontent.com'||h.endsWith('-script.googleusercontent.com'));}catch(e){return false;}}
+ function validIdentity(value){return value&&typeof value.id==='string'&&typeof value.name==='string'&&value.id.length<=64&&value.name.length<=200;}
+ window.addEventListener('message',function(event){
+  const m=event.data;if(!event.source||!allowedOrigin(event.origin)||!m||m.channel!==channel||typeof m.requestId!=='string'||m.requestId.length>100)return;
+  if(m.action==='get'){
+   sessions.set(event.source,m.requestId);let identity={id:'',name:''};
+   try{const saved=JSON.parse(localStorage.getItem(key)||'null');if(validIdentity(saved))identity=saved;}catch(e){}
+   event.source.postMessage({channel:channel,action:'restore',requestId:m.requestId,identity:identity},event.origin);
+  }else if(m.action==='set'&&sessions.get(event.source)===m.requestId&&validIdentity(m.identity)){
+   try{if(m.identity.id)localStorage.setItem(key,JSON.stringify({id:m.identity.id.trim(),name:m.identity.name}));else localStorage.removeItem(key);}catch(e){}
+  }
+ });
+})();
+</script>
+
 </body>
 </html>
